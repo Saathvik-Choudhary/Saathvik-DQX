@@ -1,0 +1,127 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # DQX - AI Assisted Checks Generation Test
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC # Environment
+# MAGIC
+# MAGIC DQX is installed at the cluster level. This notebook validates AI-assisted checks generation.
+
+# COMMAND ----------
+
+tips_url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/tips.csv"
+tips_view = "tips_open_source"
+
+tips_df = (
+    spark.read.format("csv")
+    .option("header", "true")
+    .option("inferSchema", "true")
+    .load(tips_url)
+)
+tips_df.createOrReplaceGlobalTempView(tips_view)
+
+# COMMAND ----------
+
+model_name = "databricks/databricks-claude-sonnet-4-5"
+default_user_input = "total_bill should be positive and tip should be less than total_bill"
+default_table_name = f"global_temp.{tips_view}"
+
+dbutils.widgets.text("model_name", model_name, "Model Name")
+dbutils.widgets.text("user_requirement", default_user_input, "User Requirement")
+dbutils.widgets.text("table_name", default_table_name, "Table Name")
+
+model_name = dbutils.widgets.get("model_name")
+user_requirement = dbutils.widgets.get("user_requirement")
+table_name = dbutils.widgets.get("table_name")
+
+# COMMAND ----------
+
+import os, yaml
+from databricks.labs.dqx.profiler.generator import DQGenerator
+from databricks.labs.dqx.profiler.profiler import DQProfiler
+from databricks.labs.dqx.config import LLMModelConfig, InputConfig
+from databricks.labs.dqx.engine import DQEngine
+from databricks.sdk import WorkspaceClient
+
+# COMMAND ----------
+
+# Instantiate DQX engine
+ws = WorkspaceClient()
+dq_engine = DQEngine(ws, spark)
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Generating DQX Rules with AI Assistance
+# MAGIC
+# MAGIC DQX supports AI-assisted rule generation based on user requirements. The following configurations are available:
+# MAGIC
+# MAGIC - **Model Serving Endpoint**:  
+# MAGIC   By default, DQX uses the `databricks/databricks-claude-sonnet-4-5` model serving endpoint to generate rules. However, users can specify a different model endpoint if they prefer to use another one.
+# MAGIC
+# MAGIC - **Table Name**:  
+# MAGIC   Users can optionally provide the fully qualified name of a table. DQX will use the table's schema to generate rules. If no table name is provided, the schema will be inferred based on the user's input.
+# MAGIC
+
+# COMMAND ----------
+
+# Creating model config with optional model name (default Databricks Foundational model endpoint is used if not provided)
+llm_model_config = LLMModelConfig(model_name=model_name)
+generator = DQGenerator(ws, llm_model_config=llm_model_config)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Generate DQ rules using AI-Assisted approach using user requirement
+# MAGIC
+# MAGIC Schema of the data will be guessed.
+
+# COMMAND ----------
+
+checks = generator.generate_dq_rules_ai_assisted(user_input=user_requirement)
+print("======== Generated checks =========")
+print(checks)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Generate DQ rules using AI-Assisted approach using user requirement and user specified table name
+# MAGIC
+# MAGIC Schema will be fetched from the table specified by the user.
+# MAGIC
+
+# COMMAND ----------
+
+checks = generator.generate_dq_rules_ai_assisted(user_input=user_requirement, input_config=InputConfig(location=table_name))
+print("======== Generated checks =========")
+print(checks)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Generate DQ rules using AI-Assisted approach using summary stats generated from profiler
+# MAGIC
+
+# COMMAND ----------
+
+# Profile Samples Data
+profiler = DQProfiler(ws)
+summary_stats, profiles = profiler.profile_table(InputConfig(location=table_name))
+
+# COMMAND ----------
+
+display(summary_stats)
+
+# COMMAND ----------
+
+# No user requirement provided
+checks = generator.generate_dq_rules_ai_assisted(summary_stats=summary_stats)
+
+# COMMAND ----------
+
+# User requirement provided
+checks = generator.generate_dq_rules_ai_assisted(user_input="Market segment should always be in Upper Case" , summary_stats=summary_stats)
