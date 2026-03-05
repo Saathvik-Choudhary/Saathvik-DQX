@@ -1,0 +1,358 @@
+Notebook Inventory (DQX Platform)
+1️⃣ Platform Bootstrap & Configuration (Run rarely)
+NB-01: Platform Bootstrap
+
+Purpose
+
+One-time setup of the DQ platform
+
+Responsibilities
+
+Create Unity Catalog schemas
+
+Create rule tables
+
+Create metrics tables
+
+Create quarantine tables
+
+Define environment variables (dev/test/prod)
+
+Runs
+
+Once per environment
+
+Re-run only on infra change
+
+NB-02: DQX Installation & Validation
+
+Purpose
+
+Ensure DQX is correctly installed and compatible
+
+Responsibilities
+
+Validate Spark & DBR version
+
+Import DQX
+
+Run a sample check
+
+Fail fast if environment is misconfigured
+
+Runs
+
+Once per cluster / DBR upgrade
+
+2️⃣ Profiling & Rule Discovery (On demand / scheduled)
+NB-03: Data Profiling
+
+Purpose
+
+Understand data statistically
+
+Responsibilities
+
+Run DQProfiler on tables or DataFrames
+
+Store profile results
+
+Support sampling & limits
+
+Runs
+
+On new datasets
+
+Periodically (weekly / monthly)
+
+NB-04: Rule Generation (Non-AI)
+
+Purpose
+
+Convert profiles → deterministic rules
+
+Responsibilities
+
+Use DQGenerator
+
+Generate row / dataset rules
+
+Store rules in UC tables or YAML
+
+Runs
+
+After profiling
+
+After schema change
+
+NB-05: AI Rule Generation
+
+Purpose
+
+Human-friendly rule authoring
+
+Responsibilities
+
+Generate rules from natural language
+
+Suggest ranges, enums, nullability
+
+Flag rules as proposed
+
+Runs
+
+On demand (human-in-the-loop)
+
+NB-06: AI Primary Key Detection
+
+Purpose
+
+Detect uniqueness constraints automatically
+
+Responsibilities
+
+Run PK detection
+
+Generate uniqueness rules
+
+Store as candidate rules
+
+Runs
+
+Once per dataset
+
+Re-run after schema expansion
+
+3️⃣ Data Contract Integration (Optional but powerful)
+NB-07: Data Contract → DQ Rules
+
+Purpose
+
+Enforce ODCS contracts
+
+Responsibilities
+
+Read ODCS v3.x contract
+
+Generate schema & quality rules
+
+Merge with existing rule sets
+
+Runs
+
+When contract changes
+
+Before prod rollout
+
+4️⃣ Quality Execution (Core runtime notebooks)
+NB-08: In-Transit Quality Checks (Batch)
+
+Purpose
+
+Validate data before write
+
+Responsibilities
+
+Read raw input
+
+Apply DQEngine.apply_checks_and_split
+
+Write valid / quarantine outputs
+
+Emit metrics
+
+Runs
+
+Every batch pipeline
+
+NB-09: In-Transit Quality Checks (Streaming)
+
+Purpose
+
+Streaming-safe quality enforcement
+
+Responsibilities
+
+Apply streaming-compatible DQ rules
+
+Handle late data
+
+Write valid + quarantine streams
+
+Runs
+
+Continuous
+
+NB-10: At-Rest Quality Checks
+
+Purpose
+
+Validate persisted data
+
+Responsibilities
+
+Read Delta tables
+
+Apply rules via metadata
+
+Write validation results
+
+Store metrics
+
+Runs
+
+Scheduled (hourly / daily)
+
+NB-11: DLT Expectations Generator
+
+Purpose
+
+Bridge DQX → DLT
+
+Responsibilities
+
+Convert rules to DLT expectations
+
+Auto-generate DLT code snippets
+
+Runs
+
+On rule updates
+
+5️⃣ Metrics, Scoring & Analysis (No dashboards)
+NB-12: Summary Metrics Aggregation
+
+Purpose
+
+Normalize metrics across runs
+
+Responsibilities
+
+Aggregate DQX metrics
+
+Compute failure rates
+
+Persist time-series metrics
+
+Runs
+
+After each quality job
+
+NB-13: Data Quality Scoring
+
+Purpose
+
+Create business-readable scores
+
+Responsibilities
+
+Compute per-table scores
+
+Domain-level rollups
+
+Weight rule severity
+
+Runs
+
+Scheduled (daily)
+
+NB-14: Anomaly Detection on Quality Metrics
+
+Purpose
+
+Detect unknown failures
+
+Responsibilities
+
+Run statistical / ML models
+
+Detect spikes & drifts
+
+Persist anomaly flags
+
+Runs
+
+Daily / hourly
+
+6️⃣ Governance, Promotion & Ops
+NB-15: Rule Lifecycle Management
+
+Purpose
+
+Govern rule evolution
+
+Responsibilities
+
+Rule versioning
+
+Approvals
+
+Deprecation handling
+
+Runs
+
+On demand
+
+NB-16: Dev → Test → Prod Promotion
+
+Purpose
+
+Safe rollout of rules
+
+Responsibilities
+
+Copy rules across environments
+
+Validate compatibility
+
+Block breaking changes
+
+Runs
+
+Release-driven
+
+NB-17: CI / Synthetic Data Tests
+
+Purpose
+
+Prevent bad rule deployments
+
+Responsibilities
+
+Generate synthetic datasets
+
+Test rule behavior
+
+Fail pipeline on regression
+
+Runs
+
+On PR / release
+
+NB-18: Schema Drift Detection
+
+Purpose
+
+Catch silent breakages
+
+Responsibilities
+
+Compare historical schemas
+
+Detect breaking vs non-breaking changes
+
+Trigger re-profiling
+
+Runs
+
+Scheduled
+
+🧮 Final Count (Realistic)
+Category	Notebook Count
+Bootstrap & config	2
+Profiling & rule gen	4
+AI features	2
+Quality execution	4
+Metrics & scoring	3
+Governance & ops	3
+Total	18 notebooks
